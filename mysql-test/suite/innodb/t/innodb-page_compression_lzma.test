@@ -1,0 +1,11 @@
+-- source include/have_innodb.inc
+-- source include/have_innodb_lzma.inc
+-- source include/not_embedded.inc
+
+# lzma
+set global innodb_compression_algorithm = lzma;
+
+# All page compression test use the same
+--source include/innodb-page-compression.inc
+
+-- echo #done

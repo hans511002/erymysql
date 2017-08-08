@@ -1,0 +1,10 @@
+--source include/have_innodb.inc
+--source include/not_embedded.inc
+
+# lz4
+set global innodb_compression_algorithm = zlib;
+
+# All page compression test use the same
+--source include/innodb-page-compression.inc
+
+-- echo #done

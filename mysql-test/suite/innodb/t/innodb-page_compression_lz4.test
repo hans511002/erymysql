@@ -1,0 +1,12 @@
+-- source include/have_innodb.inc
+-- source include/have_innodb_lz4.inc
+# disable embedded as it does not support restart
+-- source include/not_embedded.inc
+
+# lz4
+set global innodb_compression_algorithm = lz4;
+
+# All page compression test use the same
+--source include/innodb-page-compression.inc
+
+-- echo #done
