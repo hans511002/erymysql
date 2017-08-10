@@ -185,6 +185,7 @@ MARK_AS_ADVANCED(CYBOZU)
 OPTION(NOT_FOR_DISTRIBUTION "Allow linking with GPLv2-incompatible system libraries. Only set it you never plan to distribute the resulting binaries" OFF)
 
 INCLUDE(check_compiler_flag)
+# ADD_SUBDIRECTORY(storage/tokudb)
 
 OPTION(WITH_ASAN "Enable address sanitizer" OFF)
 IF (WITH_ASAN)
