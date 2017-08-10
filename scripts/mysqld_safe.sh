@@ -1049,7 +1049,7 @@ do
 	echo "HOSTSCFG=$HOSTSCFG"
 	WSREP_CLUSTER_ADDRESS="gcomm://"
 	int=0
-    mysqlPort=`cat $binDir/../my.cnf |grep port|tail -n 1 `
+    mysqlPort=`cat $binDir/../my.cnf |grep ^port|tail -n 1 `
     mysqlPort=`echo "${mysqlPort// /}" |awk -F= '{print $2}'`
     if [ "$mysqlPort" = "" ] ; then
         mysqlPort="3306"
@@ -1057,8 +1057,8 @@ do
    
     base_port=4167
     #wsrep_provider_options="base_port=4167;ist.recv_addr=$HOSTNAME:4168;
-    wsrep_provider_options=`cat $binDir/../my.cnf |grep wsrep_provider_options |tail -n 1  "  `
-    wsrep_provider_options=`echo "${wsrep_provider_options// /}" | sed -e "s|wsrep_provider_options=||  `
+    wsrep_provider_options=`cat $binDir/../my.cnf |grep ^wsrep_provider_options |tail -n 1 `
+    wsrep_provider_options=`echo "${wsrep_provider_options// /}" | sed -e "s|wsrep_provider_options=||"  `
     if [ "$wsrep_provider_options" != "" ] ; then
         wsrep_provider_options="${wsrep_provider_options//;/ }"
         for item  in $wsrep_provider_options ; do
@@ -1066,9 +1066,12 @@ do
             itemValue=`echo "$item" | awk -F= '{print $2}'`
             if [ "$itemName" = "base_port" ] ; then
                 base_port=${itemValue// /}
+                break
             fi
         done
     fi
+    
+    log_notice "mysqlPort=$mysqlPort base_port=$base_port"
  
 	thisNodeIP=$(ping $VHOSTNAME -c 1  -W 1 | grep "icmp_seq" |grep from|sed -e 's|.*(||' -e 's|).*||')
 	if [ "$HOSTSCFG" != "" -a "$HOST_COUNT" -gt "1" ] ; then
