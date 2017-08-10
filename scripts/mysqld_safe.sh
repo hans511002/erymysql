@@ -1049,45 +1049,66 @@ do
 	echo "HOSTSCFG=$HOSTSCFG"
 	WSREP_CLUSTER_ADDRESS="gcomm://"
 	int=0
+    mysqlPort=`cat $binDir/../my.cnf |grep port|tail -n 1 `
+    mysqlPort=`echo "${mysqlPort// /}" |awk -F= '{print $2}'`
+    if [ "$mysqlPort" = "" ] ; then
+        mysqlPort="3306"
+    fi
+   
+    base_port=4167
+    #wsrep_provider_options="base_port=4167;ist.recv_addr=$HOSTNAME:4168;
+    wsrep_provider_options=`cat $binDir/../my.cnf |grep wsrep_provider_options |tail -n 1  "  `
+    wsrep_provider_options=`echo "${wsrep_provider_options// /}" | sed -e "s|wsrep_provider_options=||  `
+    if [ "$wsrep_provider_options" != "" ] ; then
+        wsrep_provider_options="${wsrep_provider_options//;/ }"
+        for item  in $wsrep_provider_options ; do
+            itemName=`echo "$item" | awk -F= '{print $1}'`
+            itemValue=`echo "$item" | awk -F= '{print $2}'`
+            if [ "$itemName" = "base_port" ] ; then
+                base_port=${itemValue// /}
+            fi
+        done
+    fi
+ 
 	thisNodeIP=$(ping $VHOSTNAME -c 1  -W 1 | grep "icmp_seq" |grep from|sed -e 's|.*(||' -e 's|).*||')
-	 if [ "$HOSTSCFG" != "" -a "$HOST_COUNT" -gt "1" ] ; then
-	     echo "wait $waitTime s for check WSREP_CLUSTER_ADDRESS"
-	      	while(( $int<$waitTime )) ;  do
-		    for NODE_SERVICE_HOST in $HOSTSCFG ; do
-					if [ "$VHOSTNAME" = "$NODE_SERVICE_HOST"  ] ; then
-						  continue
-					fi
-					 #?D??¡§o??¡è??????  3306 4444 4567 4568
-		            echo "check $NODE_SERVICE_HOST port 3306 4567   "
-		            echo "nmap -n $NODE_SERVICE_HOST -p 3306|grep 3306|grep tcp|awk '{print \$2}' "
-		            MYSQL_STATUS=$(nmap -n $NODE_SERVICE_HOST -p 3306|grep 3306|grep tcp|awk '{print $2}')
-		            
-		            MYSQL_CLS_STATUS="closed"
-		            if [ "$MYSQL_STATUS" = "open" -o "$MYSQL_STATUS" = "filtered" ] ; then
-		                echo "nmap -n $NODE_SERVICE_HOST -p 4567|grep 4567|grep tcp|awk '{print \$2}' "
-		                MYSQL_CLS_STATUS=$(nmap -n $NODE_SERVICE_HOST -p 4567|grep 4567|grep tcp|awk '{print $2}')
-		            fi 
-		            if [ "$MYSQL_CLS_STATUS" = "open"  -o "$MYSQL_CLS_STATUS" = "filtered" ] ; then
-			        if [ $WSREP_CLUSTER_ADDRESS != "gcomm://" ]; then
-				    WSREP_CLUSTER_ADDRESS="${WSREP_CLUSTER_ADDRESS},"
+	if [ "$HOSTSCFG" != "" -a "$HOST_COUNT" -gt "1" ] ; then
+	    echo "wait $waitTime s for check WSREP_CLUSTER_ADDRESS"
+        while(( $int<$waitTime )) ;  do
+    	    for NODE_SERVICE_HOST in $HOSTSCFG ; do
+				if [ "$VHOSTNAME" = "$NODE_SERVICE_HOST"  ] ; then
+					  continue
 				fi
-		              # append
-		              WSREP_CLUSTER_ADDRESS="${WSREP_CLUSTER_ADDRESS}"${NODE_SERVICE_HOST}
-		            fi 
-			done
-		    if [ "$HOST_ISFIRST" != "$VHOSTNAME" -a "$HOST_ISFIRST" != "$thisNodeIP" -a "$WSREP_CLUSTER_ADDRESS" = "gcomm://" ] ; then
-		        sleep 1
-		 	let "int++"
-		    else
-		 	break
-		    fi
+				
+	            echo "check $NODE_SERVICE_HOST port $mysqlPort $base_port   "
+	            echo "nmap -n $NODE_SERVICE_HOST -p $mysqlPort|grep $mysqlPort|grep tcp|awk '{print \$2}' "
+	            MYSQL_STATUS=$(nmap -n $NODE_SERVICE_HOST -p $mysqlPort|grep $mysqlPort|grep tcp|awk '{print $2}')
+	            
+	            MYSQL_CLS_STATUS="closed"
+	            if [ "$MYSQL_STATUS" = "open" -o "$MYSQL_STATUS" = "filtered" ] ; then
+	                echo "nmap -n $NODE_SERVICE_HOST -p $base_port|grep $base_port|grep tcp|awk '{print \$2}' "
+	                MYSQL_CLS_STATUS=$(nmap -n $NODE_SERVICE_HOST -p $base_port|grep $base_port|grep tcp|awk '{print $2}')
+	            fi 
+	            if [ "$MYSQL_CLS_STATUS" = "open"  -o "$MYSQL_CLS_STATUS" = "filtered" ] ; then
+    		        if [ $WSREP_CLUSTER_ADDRESS != "gcomm://" ]; then
+        			    WSREP_CLUSTER_ADDRESS="${WSREP_CLUSTER_ADDRESS},"
+        			fi
+	                # append
+	                WSREP_CLUSTER_ADDRESS="${WSREP_CLUSTER_ADDRESS}"${NODE_SERVICE_HOST}:$base_port
+	            fi 
+    		done
+    	    if [ "$HOST_ISFIRST" != "$VHOSTNAME" -a "$HOST_ISFIRST" != "$thisNodeIP" -a "$WSREP_CLUSTER_ADDRESS" = "gcomm://" ] ; then
+    	        sleep 1
+    	 	    let "int++"
+    	    else
+    	 	    break
+    	    fi
 		done
 	fi			
-      sed -i -e "s|^wsrep_node_address=.*$|wsrep_node_address=${VHOSTNAME}|" $binDir/../my.cnf
-      sed -i -e "s|^wsrep_node_name=.*$|wsrep_node_name=${VHOSTNAME}|" $binDir/../my.cnf
-      sed -i -e "s|^wsrep_cluster_address=gcomm://.*|wsrep_cluster_address=${WSREP_CLUSTER_ADDRESS}|" $binDir/../my.cnf
-      echo "wsrep_cluster_address=${WSREP_CLUSTER_ADDRESS}"
-      sed -i -e "s|\${HOSTNAME}$|${VHOSTNAME}|g" -e "s|\${HOSTIP}$|${thisNodeIP}|g" $binDir/../my.cnf
+    sed -i -e "s|^wsrep_node_address=.*$|wsrep_node_address=${VHOSTNAME}|" $binDir/../my.cnf
+    sed -i -e "s|^wsrep_node_name=.*$|wsrep_node_name=${VHOSTNAME}|" $binDir/../my.cnf
+    sed -i -e "s|^wsrep_cluster_address=gcomm://.*|wsrep_cluster_address=${WSREP_CLUSTER_ADDRESS}|" $binDir/../my.cnf
+    echo "wsrep_cluster_address=${WSREP_CLUSTER_ADDRESS}"
+    sed -i -e "s|\${HOSTNAME}$|${VHOSTNAME}|g" -e "s|\${HOSTIP}$|${thisNodeIP}|g" $binDir/../my.cnf
  
 
   
