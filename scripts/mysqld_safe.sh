@@ -75,7 +75,7 @@ esac
 usage () {
         cat <<EOF
 Usage: $0 [OPTIONS]
-  --no-defaults              Don't read the system defaults file
+  --no-defaults              Don\'t read the system defaults file
   --core-file-size=LIMIT     Limit core files to the specified size
   --defaults-file=FILE       Use the specified defaults file
   --defaults-extra-file=FILE Also use defaults from the specified file
@@ -86,13 +86,13 @@ Usage: $0 [OPTIONS]
   --malloc-lib=LIB           Preload shared library LIB if available
   --mysqld=FILE              Use the specified file as mysqld
   --mysqld-version=VERSION   Use "mysqld-VERSION" as mysqld
-  --dry-run                  Simulate the start to detect errors but don't start
+  --dry-run                  Simulate the start to detect errors but don\'t start
   --nice=NICE                Set the scheduling priority of mysqld
   --no-auto-restart          Exit after starting mysqld
   --nowatch                  Exit after starting mysqld
   --plugin-dir=DIR           Plugins are under DIR or DIR/VERSION, if
                              VERSION is given
-  --skip-kill-mysqld         Don't try to kill stray mysqld processes
+  --skip-kill-mysqld         Don\'t try to kill stray mysqld processes
   --syslog                   Log messages to syslog with 'logger'
   --skip-syslog              Log messages to error log (default)
   --syslog-tag=TAG           Pass -t "mysqld-TAG" to 'logger'
@@ -714,7 +714,7 @@ then
   if [ $want_syslog -eq 1 ]
   then
     # User explicitly asked for syslog, so warn that it isn't used
-    log_error "Can't log to error log and syslog at the same time.  Remove all --log-error configuration options for --syslog to take effect."
+    log_error "Can\'t log to error log and syslog at the same time.  Remove all --log-error configuration options for --syslog to take effect."
     want_syslog=0
   fi
 
@@ -878,7 +878,7 @@ then
   rm -f "$pid_file"
   if test -f "$pid_file"
   then
-    log_error "Fatal error: Can't remove the pid file:
+    log_error "Fatal error: Can\'t remove the pid file:
 $pid_file
 Please remove it manually and start $0 again;
 mysqld daemon not started"
@@ -1087,7 +1087,7 @@ do
       sed -i -e "s|^wsrep_node_name=.*$|wsrep_node_name=${VHOSTNAME}|" $binDir/../my.cnf
       sed -i -e "s|^wsrep_cluster_address=gcomm://.*|wsrep_cluster_address=${WSREP_CLUSTER_ADDRESS}|" $binDir/../my.cnf
       echo "wsrep_cluster_address=${WSREP_CLUSTER_ADDRESS}"
-
+      sed -i -e "s|\${HOSTNAME}$|${VHOSTNAME}|g" -e "s|\${HOSTIP}$|${thisNodeIP}|g" $binDir/../my.cnf
  
 
   
