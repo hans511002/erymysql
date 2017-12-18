@@ -986,6 +986,14 @@ fast_restart=0
 max_fast_restarts=5
 # flag whether a usable sleep command exists
 have_sleep=1
+ 
+function ECHO(){               
+    log_notice  "$@"
+}
+
+ECHO "======================$cmd==="
+
+
 
 # close stdout and stderr, everything goes to $logging now
 if expr "${-}" : '.*x' > /dev/null
@@ -1018,7 +1026,7 @@ do
 		HOSTSCFG=`cat $cfgDir/erydb.xml |grep  ModuleIPAddr |grep -v unassigned |grep -v "0.0.0.0" |sed -e 's/<\/.*//' -e 's/<.*>//' `
 		HOST_ISFIRST=($HOSTSCFG)
 		HOST_ISFIRST=${HOST_ISFIRST[0]}
-		echo "HOST_ISFIRST=$HOST_ISFIRST"
+		ECHO "HOST_ISFIRST=$HOST_ISFIRST"
 	else
 	     HOSTSCFG=`cat $cfgDir/servers `
 	     if [ "$HOSTSCFG" != "" ] ; then
@@ -1033,20 +1041,18 @@ do
 		      VHOSTNAME=`hostname`
 		   fi
 		fi
-	 waitTime=15
+	 waitTime=2
 	 for NODE_SERVICE_HOST in $HOSTSCFG ; do
 		if [ "$HOST_ISFIRST" != "$VHOSTNAME" ] ; then
-		    ((waitTime++))
-		    ((waitTime++))
-		    ((waitTime++))
-		    ((waitTime++))
+		    ((waitTime+=5))
 		else
 		    break
 		fi
         done
+    ECHO "waitTime=$waitTime"
 	HOST_COUNT=($HOSTSCFG)
 	HOST_COUNT=${#HOST_COUNT[@]}
-	echo "HOSTSCFG=$HOSTSCFG"
+	ECHO HOSTSCFG=$HOSTSCFG
 	WSREP_CLUSTER_ADDRESS="gcomm://"
 	int=0
     mysqlPort=`cat $binDir/../my.cnf |grep ^port|tail -n 1 `
@@ -1075,20 +1081,20 @@ do
  
 	thisNodeIP=$(ping $VHOSTNAME -c 1  -W 1 | grep "icmp_seq" |grep from|sed -e 's|.*(||' -e 's|).*||')
 	if [ "$HOSTSCFG" != "" -a "$HOST_COUNT" -gt "1" ] ; then
-	    echo "wait $waitTime s for check WSREP_CLUSTER_ADDRESS"
+	    ECHO "wait $waitTime s for check WSREP_CLUSTER_ADDRESS"
         while(( $int<$waitTime )) ;  do
-    	    for NODE_SERVICE_HOST in $HOSTSCFG ; do
-				if [ "$VHOSTNAME" = "$NODE_SERVICE_HOST"  ] ; then
-					  continue
-				fi
+    	    for NODE_SERVICE_HOST in $HOSTSCFG ; do      
+                    if [ "$VHOSTNAME" = "$NODE_SERVICE_HOST" -o  "$thisNodeIP" = "$NODE_SERVICE_HOST"  ] ; then
+                        continue
+                    fi
 				
-	            echo "check $NODE_SERVICE_HOST port $mysqlPort $base_port   "
-	            echo "nmap -n $NODE_SERVICE_HOST -p $mysqlPort|grep $mysqlPort|grep tcp|awk '{print \$2}' "
+	            ECHO "check $NODE_SERVICE_HOST port $mysqlPort $base_port   "
+	            ECHO "nmap -n $NODE_SERVICE_HOST -p $mysqlPort|grep $mysqlPort|grep tcp|awk '{print \$2}' "
 	            MYSQL_STATUS=$(nmap -n $NODE_SERVICE_HOST -p $mysqlPort|grep $mysqlPort|grep tcp|awk '{print $2}')
 	            
 	            MYSQL_CLS_STATUS="closed"
 	            if [ "$MYSQL_STATUS" = "open" -o "$MYSQL_STATUS" = "filtered" ] ; then
-	                echo "nmap -n $NODE_SERVICE_HOST -p $base_port|grep $base_port|grep tcp|awk '{print \$2}' "
+	                ECHO "nmap -n $NODE_SERVICE_HOST -p $base_port|grep $base_port|grep tcp|awk '{print \$2}' "
 	                MYSQL_CLS_STATUS=$(nmap -n $NODE_SERVICE_HOST -p $base_port|grep $base_port|grep tcp|awk '{print $2}')
 	            fi 
 	            if [ "$MYSQL_CLS_STATUS" = "open"  -o "$MYSQL_CLS_STATUS" = "filtered" ] ; then
@@ -1110,12 +1116,13 @@ do
     sed -i -e "s|^wsrep_node_address=.*$|wsrep_node_address=${VHOSTNAME}|" $binDir/../my.cnf
     sed -i -e "s|^wsrep_node_name=.*$|wsrep_node_name=${VHOSTNAME}|" $binDir/../my.cnf
     sed -i -e "s|^wsrep_cluster_address=gcomm://.*|wsrep_cluster_address=${WSREP_CLUSTER_ADDRESS}|" $binDir/../my.cnf
-    echo "wsrep_cluster_address=${WSREP_CLUSTER_ADDRESS}"
+    ECHO "wsrep_cluster_address=${WSREP_CLUSTER_ADDRESS}"
     sed -i -e "s|\${HOSTNAME}$|${VHOSTNAME}|g" -e "s|\${HOSTIP}$|${thisNodeIP}|g" $binDir/../my.cnf
  
 
   
     # this sets wsrep_start_position_opt
+    ECHO "====$cmd"
     wsrep_recover_position "$cmd"
 
     [ $? -ne 0 ] && exit 1 #
