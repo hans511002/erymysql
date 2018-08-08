@@ -1042,8 +1042,9 @@ do
 		   fi
 		fi
 	 waitTime=2
+	thisNodeIP=$(ping $VHOSTNAME -c 1  -W 1 | grep "icmp_seq" |grep from|sed -e 's|.*(||' -e 's|).*||')
 	 for NODE_SERVICE_HOST in $HOSTSCFG ; do
-		if [ "$HOST_ISFIRST" != "$VHOSTNAME" ] ; then
+		if [ "$HOST_ISFIRST" != "$VHOSTNAME" -a "$HOST_ISFIRST" != "$thisNodeIP"  ] ; then
 		    ((waitTime+=5))
 		else
 		    break
@@ -1079,7 +1080,6 @@ do
     
     log_notice "mysqlPort=$mysqlPort base_port=$base_port"
  
-	thisNodeIP=$(ping $VHOSTNAME -c 1  -W 1 | grep "icmp_seq" |grep from|sed -e 's|.*(||' -e 's|).*||')
 	if [ "$HOSTSCFG" != "" -a "$HOST_COUNT" -gt "1" ] ; then
 	    ECHO "wait $waitTime s for check WSREP_CLUSTER_ADDRESS"
         while(( $int<$waitTime )) ;  do
